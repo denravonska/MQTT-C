@@ -1362,6 +1362,19 @@ ssize_t mqtt_unpack_publish_response(struct mqtt_response *mqtt_response, const 
     /* parse variable header */
     response->topic_name_size = __mqtt_unpack_uint16(buf);
     buf += 2;
+
+    /* validate topic_name_size fits within remaining_length */
+    {
+        /* overhead: 2 bytes for topic length prefix, 2 bytes for packet ID if QoS > 0 */
+        uint32_t min_length = sizeof(uint16_t) + response->topic_name_size;
+        if (response->qos_level > 0) {
+            min_length += sizeof(uint16_t);
+        }
+        if (min_length > fixed_header->remaining_length) {
+            return MQTT_ERROR_MALFORMED_RESPONSE;
+        }
+    }
+
     response->topic_name = buf;
     buf += response->topic_name_size;
 
